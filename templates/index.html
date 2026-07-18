@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Underwriting Desk — Loan Approval Analyzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0f1a2e;
+    --ink-soft:#182647;
+    --ink-line: rgba(216,207,176,0.18);
+    --paper:#f4efdd;
+    --paper-shadow:#e4dcc0;
+    --paper-line:#cdc3a0;
+    --text-dark:#241f14;
+    --text-mute:#6b6350;
+    --gold:#b8862f;
+    --gold-soft:#e3c98a;
+    --green:#1f6f4a;
+    --green-soft:#e4efe7;
+    --red:#a3352a;
+    --red-soft:#f4e4e0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top left, #16224a 0%, transparent 55%),
+      radial-gradient(ellipse at bottom right, #0d1730 0%, transparent 60%),
+      var(--ink);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:0 0 80px 0;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:44px 28px 0;}
+
+  /* Header */
+  .masthead{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:1px solid var(--ink-line);
+    padding-bottom:22px;margin-bottom:34px;
+    flex-wrap:wrap;gap:16px;
+  }
+  .masthead-title{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:clamp(28px,4.2vw,44px);
+    letter-spacing:-0.01em;
+    color:var(--paper);
+    line-height:1.05;
+  }
+  .masthead-title em{
+    font-style:italic;font-weight:500;color:var(--gold-soft);
+  }
+  .masthead-sub{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;letter-spacing:0.14em;text-transform:uppercase;
+    color:#9aa6c4;margin-top:6px;
+  }
+  .masthead-stats{
+    display:flex;gap:26px;font-family:'IBM Plex Mono',monospace;
+  }
+  .mstat{text-align:right;}
+  .mstat b{display:block;font-size:20px;color:var(--gold-soft);font-weight:600;}
+  .mstat span{font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:#8994b5;}
+
+  /* Layout */
+  .desk{
+    display:grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap:28px;
+    align-items:start;
+  }
+  @media (max-width:920px){ .desk{grid-template-columns:1fr;} }
+
+  /* Ledger (form) card */
+  .ledger{
+    background:
+      linear-gradient(var(--paper),var(--paper));
+    color:var(--text-dark);
+    border-radius:3px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.05);
+    position:relative;
+    overflow:hidden;
+  }
+  .ledger::before{
+    content:"";position:absolute;inset:0;
+    background: repeating-linear-gradient(
+      to bottom, transparent, transparent 37px, var(--paper-line) 38px
+    );
+    opacity:0.5; pointer-events:none;
+  }
+  .ledger-head{
+    padding:26px 30px 14px;
+    border-bottom:2px solid var(--text-dark);
+    position:relative;z-index:1;
+    display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .ledger-head h2{
+    font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin:0;
+  }
+  .ledger-head .file-no{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-mute);letter-spacing:0.08em;
+  }
+  .ledger-body{padding:8px 30px 26px;position:relative;z-index:1;}
+
+  .field-group{margin-top:20px;}
+  .field-group-title{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;
+    color:var(--gold);border-bottom:1px solid var(--paper-line);
+    padding-bottom:6px;margin-bottom:14px;
+  }
+  .field-row{
+    display:grid;grid-template-columns: 1fr 1fr;gap:16px;
+  }
+  @media (max-width:520px){ .field-row{grid-template-columns:1fr;} }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:flex;justify-content:space-between;
+    font-size:12.5px;font-weight:600;color:var(--text-dark);margin-bottom:5px;
+  }
+  .field label .val{
+    font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--green);
+    background:var(--green-soft);padding:1px 7px;border-radius:10px;font-size:11.5px;
+  }
+  input[type=range]{
+    width:100%;height:4px;border-radius:2px;background:var(--paper-line);
+    -webkit-appearance:none;appearance:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:16px;height:16px;border-radius:50%;
+    background:var(--ink);border:2px solid var(--gold);
+    cursor:pointer;margin-top:-1px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;
+    background:var(--ink);border:2px solid var(--gold);cursor:pointer;
+  }
+  select{
+    width:100%;padding:8px 10px;border-radius:4px;
+    border:1px solid var(--paper-line);background:#fffdf7;
+    font-family:'Inter',sans-serif;font-size:13px;color:var(--text-dark);
+    cursor:pointer;
+  }
+  select:focus, input[type=range]:focus{outline:2px solid var(--gold);outline-offset:2px;}
+
+  /* Case file (results) card */
+  .casefile{
+    background:var(--ink-soft);
+    border:1px solid var(--ink-line);
+    border-radius:3px;
+    padding:28px 28px 30px;
+    position:sticky; top:24px;
+  }
+  .casefile h2{
+    font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin:0 0 18px;
+    color:var(--paper);
+  }
+  .verdict-stage{
+    position:relative;
+    background:var(--paper);
+    border-radius:3px;
+    min-height:190px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    overflow:hidden;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+  }
+  .stamp{
+    font-family:'Fraunces',serif;font-weight:900;font-style:italic;
+    font-size:34px;letter-spacing:0.03em;
+    padding:10px 26px;border:5px double currentColor;border-radius:8px;
+    transform:rotate(-8deg) scale(1);
+    transition: transform 0.35s cubic-bezier(.2,1.4,.4,1), color 0.3s, opacity 0.3s;
+    opacity:0.94;
+    text-transform:uppercase;
+  }
+  .stamp.approved{color:var(--green);}
+  .stamp.declined{color:var(--red);}
+  .stamp.pulse{animation:stampIn 0.4s cubic-bezier(.2,1.4,.4,1);}
+  @keyframes stampIn{
+    0%{transform:rotate(-8deg) scale(2.2);opacity:0;}
+    60%{opacity:1;}
+    100%{transform:rotate(-8deg) scale(1);opacity:0.94;}
+  }
+  .prob-line{
+    margin-top:14px;font-family:'IBM Plex Mono',monospace;color:var(--text-mute);
+    font-size:12.5px;letter-spacing:0.02em;
+  }
+  .prob-line b{color:var(--text-dark);font-size:15px;}
+
+  .meter{
+    height:8px;border-radius:5px;background:var(--paper-shadow);
+    margin-top:26px;overflow:hidden;position:relative;
+  }
+  .meter-fill{
+    height:100%;border-radius:5px;
+    background:linear-gradient(90deg, var(--red), var(--gold) 50%, var(--green));
+    transition:width 0.4s ease;
+  }
+  .meter-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-mute);margin-top:5px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;}
+
+  .factors{margin-top:26px;}
+  .factors h3{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.14em;
+    text-transform:uppercase;color:#9aa6c4;border-bottom:1px solid var(--ink-line);
+    padding-bottom:6px;margin:0 0 12px;
+  }
+  .factor-row{
+    display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px;
+  }
+  .factor-label{flex:0 0 150px;color:#c9d1e8;}
+  .factor-bar-track{flex:1;height:7px;background:rgba(255,255,255,0.08);border-radius:4px;position:relative;overflow:hidden;}
+  .factor-bar{position:absolute;top:0;bottom:0;border-radius:4px;}
+  .factor-bar.pos{background:var(--green);left:50%;}
+  .factor-bar.neg{background:var(--red);right:50%;}
+
+  .footnote{
+    margin-top:24px;font-size:11.5px;color:#8994b5;line-height:1.55;
+    border-top:1px dashed var(--ink-line);padding-top:14px;
+  }
+
+  /* Model stats strip */
+  .strip{
+    margin-top:34px;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+    background:var(--ink-line);
+    border:1px solid var(--ink-line);
+    border-radius:3px;overflow:hidden;
+  }
+  .strip-cell{
+    background:var(--ink-soft);padding:18px 20px;
+  }
+  .strip-cell b{
+    display:block;font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:var(--gold-soft);
+  }
+  .strip-cell span{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.1em;
+    text-transform:uppercase;color:#8994b5;
+  }
+  @media (max-width:700px){ .strip{grid-template-columns:repeat(2,1fr);} }
+
+  .global-importance{margin-top:34px;}
+  .global-importance h2{
+    font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin:0 0 6px;
+  }
+  .global-importance p.lead{color:#9aa6c4;font-size:13px;margin:0 0 20px;max-width:640px;}
+  .gi-row{display:flex;align-items:center;gap:14px;margin-bottom:9px;}
+  .gi-label{flex:0 0 210px;font-size:12.5px;color:#c9d1e8;font-family:'IBM Plex Mono',monospace;}
+  .gi-track{flex:1;height:16px;background:rgba(255,255,255,0.06);border-radius:3px;position:relative;}
+  .gi-bar{position:absolute;top:0;bottom:0;border-radius:3px;left:50%;}
+  .gi-bar.pos{background:linear-gradient(90deg, #1f6f4a, #3a9c6c);}
+  .gi-bar.neg{background:linear-gradient(90deg, #cf5648, #a3352a);right:50%;left:auto;}
+  .gi-center{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:rgba(255,255,255,0.25);}
+
+  .legend{display:flex;gap:18px;margin-top:10px;font-size:11px;color:#8994b5;font-family:'IBM Plex Mono',monospace;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:10px;height:10px;border-radius:2px;display:inline-block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <div class="masthead-title">The Underwriting <em>Desk</em></div>
+      <div class="masthead-sub">Interactive loan approval analyzer — trained on file history</div>
+    </div>
+    <div class="masthead-stats">
+      <div class="mstat"><b id="statRows">—</b><span>Applications on file</span></div>
+      <div class="mstat"><b id="statApproved">—</b><span>Historically approved</span></div>
+      <div class="mstat"><b id="statAcc">—</b><span>Model accuracy</span></div>
+    </div>
+  </div>
+
+  <div class="desk">
+    <!-- LEFT: application ledger -->
+    <div class="ledger">
+      <div class="ledger-head">
+        <h2>Applicant Ledger</h2>
+        <div class="file-no">FILE №&nbsp;<span id="fileNo">4471</span></div>
+      </div>
+      <div class="ledger-body" id="formHost">
+        <!-- fields injected by JS -->
+      </div>
+    </div>
+
+    <!-- RIGHT: case file / verdict -->
+    <div class="casefile">
+      <h2>Case File — Verdict</h2>
+      <div class="verdict-stage">
+        <div class="stamp approved" id="stamp">Approved</div>
+        <div class="prob-line">Predicted probability of approval&nbsp; <b id="probText">—%</b></div>
+      </div>
+      <div class="meter"><div class="meter-fill" id="meterFill" style="width:50%"></div></div>
+      <div class="meter-labels"><span>Decline</span><span>Approve</span></div>
+
+      <div class="factors">
+        <h3>What's driving this verdict</h3>
+        <div id="factorHost"></div>
+      </div>
+
+      <div class="footnote">
+        Verdict is computed live in your browser with a logistic regression model fit on
+        the historical loan file (no server call). It reflects patterns in past decisions,
+        not a lending policy — treat it as a scenario explorer.
+      </div>
+    </div>
+  </div>
+
+  <!-- model stats strip -->
+  <div class="strip">
+    <div class="strip-cell"><b id="mAcc">—</b><span>Accuracy</span></div>
+    <div class="strip-cell"><b id="mPrec">—</b><span>Precision</span></div>
+    <div class="strip-cell"><b id="mRec">—</b><span>Recall</span></div>
+    <div class="strip-cell"><b id="mF1">—</b><span>F1 score</span></div>
+  </div>
+
+  <!-- global feature importance -->
+  <div class="global-importance">
+    <h2>What moves a decision, overall</h2>
+    <p class="lead">Ranked by the model's learned weight on each factor, independent of any single applicant.
+      Green pushes toward approval; red pushes toward decline.</p>
+    <div id="giHost"></div>
+    <div class="legend">
+      <span><i class="swatch" style="background:#2f8a5f"></i> Pushes toward approval</span>
+      <span><i class="swatch" style="background:#a3352a"></i> Pushes toward decline</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const MODEL = {"feature_names": ["Applicant_Income", "Coapplicant_Income", "Age", "Dependents", "Credit_Score", "Existing_Loans", "DTI_Ratio", "Savings", "Collateral_Value", "Loan_Amount", "Loan_Term", "Employment_Status_Salaried", "Employment_Status_Self-employed", "Employment_Status_Unemployed", "Marital_Status_Single", "Loan_Purpose_Car", "Loan_Purpose_Education", "Loan_Purpose_Home", "Loan_Purpose_Personal", "Property_Area_Semiurban", "Property_Area_Urban", "Education_Level_Not Graduate", "Gender_Male", "Employer_Category_Government", "Employer_Category_MNC", "Employer_Category_Private", "Employer_Category_Unemployed"], "coef": [0.3842426301895035, -2.29436473911322e-05, -0.049050410135247864, -0.09266272700222943, 1.2501243428468336, -0.021082197285924684, -1.187719998293641, 0.08519579079114532, 0.019845931266708926, -0.15459406867556735, -0.0803810196091513, -0.18488076384026067, -0.09442460321616519, -0.1750444172603591, 0.00848857765342531, -0.22984392428323372, -0.06852566689706907, -0.1278330446422902, -0.11978502384316385, 0.01971792075648455, 0.10249681686379186, -0.12853621901247628, -0.11458228468688662, -0.1101217292059088, 0.04653189962024029, 0.00010806241802923506, -0.009898963339283893], "intercept": -0.7290702846047324, "scaler_mean": [11044.055691639389, 5054.325978357022, 39.672165963297545, 1.4837476110341412, 685.9398229164995, 1.9234248041390134, 0.32824954210179025, 10044.90351486613, 25111.25316960039, 20177.39485851562, 47.64773933374667, 0.5081658291457286, 0.18103015075376885, 0.08881909547738694, 0.35816582914572864, 0.18743718592964825, 0.18467336683417085, 0.19371859296482413, 0.17148241206030151, 0.19459798994974875, 0.5229899497487437, 0.2733668341708543, 0.6089195979899498, 0.20037688442211055, 0.14522613065326634, 0.4197236180904523, 0.09761306532663316], "scaler_scale": [4838.919530513634, 2814.937346738194, 10.924650477278123, 1.1889215026991216, 65.35826328896434, 1.519691526068657, 0.1324861567885192, 5615.35922888411, 13818.133040145025, 11066.06547804618, 26.00383055419056, 0.4999333147874452, 0.38504316027146435, 0.28448244894187363, 0.479461226772386, 0.39026207509880173, 0.388032362588873, 0.39521095595207495, 0.37692995956050307, 0.39589090954108336, 0.4994711825626682, 0.44568756786145486, 0.48799233720798096, 0.4002823860868709, 0.35232868408454454, 0.4935136295053181, 0.2967907592971378], "metrics": {"accuracy": 0.7211055276381909, "precision": 0.6450276243093923, "recall": 0.6104575163398693, "f1": 0.6272666218938885}, "confusion_matrix": [[968, 257], [298, 467]], "categorical_cols": ["Employment_Status", "Marital_Status", "Loan_Purpose", "Property_Area", "Education_Level", "Gender", "Employer_Category"], "numerical_cols": ["Applicant_Income", "Coapplicant_Income", "Age", "Dependents", "Credit_Score", "Existing_Loans", "DTI_Ratio", "Savings", "Collateral_Value", "Loan_Amount", "Loan_Term"], "category_options": {"Employment_Status": ["Contract", "Salaried", "Self-employed", "Unemployed"], "Marital_Status": ["Married", "Single"], "Loan_Purpose": ["Business", "Car", "Education", "Home", "Personal"], "Property_Area": ["Rural", "Semiurban", "Urban"], "Education_Level": ["Graduate", "Not Graduate"], "Gender": ["Female", "Male"], "Employer_Category": ["Business", "Government", "MNC", "Private", "Unemployed"]}, "numerical_stats": {"Applicant_Income": {"min": 2009.0, "max": 19988.0, "mean": 11052.318808312128, "median": 11052.31880831213}, "Coapplicant_Income": {"min": 1.0, "max": 9996.0, "mean": 5053.076183431953, "median": 5053.076183431953}, "Age": {"min": 21.0, "max": 59.0, "mean": 39.669726706763754, "median": 39.66972670676375}, "Dependents": {"min": 0.0, "max": 3.0, "mean": 1.4853640494557752, "median": 1.4853640494557752}, "Credit_Score": {"min": 550.0, "max": 799.0, "mean": 686.0862619808307, "median": 687.0}, "Existing_Loans": {"min": 0.0, "max": 4.0, "mean": 1.927530107754067, "median": 2.0}, "DTI_Ratio": {"min": 0.1, "max": 0.6, "mean": 0.32847740563530037, "median": 0.32847740563530037}, "Savings": {"min": 65.0, "max": 19996.0, "mean": 10050.65007398013, "median": 10050.65007398013}, "Collateral_Value": {"min": 36.0, "max": 49954.0, "mean": 25214.194191223232, "median": 25214.194191223236}, "Loan_Amount": {"min": 1015.0, "max": 39995.0, "mean": 20172.446300211413, "median": 20172.446300211417}, "Loan_Term": {"min": 12.0, "max": 84.0, "mean": 47.41707368868125, "median": 48.0}}, "ohe_categories": {"Employment_Status": ["Contract", "Salaried", "Self-employed", "Unemployed"], "Marital_Status": ["Married", "Single"], "Loan_Purpose": ["Business", "Car", "Education", "Home", "Personal"], "Property_Area": ["Rural", "Semiurban", "Urban"], "Education_Level": ["Graduate", "Not Graduate"], "Gender": ["Female", "Male"], "Employer_Category": ["Business", "Government", "MNC", "Private", "Unemployed"]}, "n_rows": 9950, "approved_pct": 39.095477386934675};
+
+const LABELS = {
+  Applicant_Income: "Applicant income (monthly)",
+  Coapplicant_Income: "Co-applicant income (monthly)",
+  Age: "Applicant age",
+  Dependents: "Dependents",
+  Credit_Score: "Credit score",
+  Existing_Loans: "Existing loans",
+  DTI_Ratio: "Debt-to-income ratio",
+  Savings: "Savings balance",
+  Collateral_Value: "Collateral value",
+  Loan_Amount: "Loan amount requested",
+  Loan_Term: "Loan term (months)",
+  Employment_Status: "Employment status",
+  Marital_Status: "Marital status",
+  Loan_Purpose: "Loan purpose",
+  Property_Area: "Property area",
+  Education_Level: "Education level",
+  Gender: "Gender",
+  Employer_Category: "Employer category"
+};
+
+const STEP = {
+  Applicant_Income: 100, Coapplicant_Income: 50, Age: 1, Dependents: 1,
+  Credit_Score: 1, Existing_Loans: 1, DTI_Ratio: 0.01, Savings: 100,
+  Collateral_Value: 200, Loan_Amount: 200, Loan_Term: 6
+};
+
+const FMT = {
+  Applicant_Income: v => "₹" + Math.round(v).toLocaleString(),
+  Coapplicant_Income: v => "₹" + Math.round(v).toLocaleString(),
+  Age: v => Math.round(v) + " yrs",
+  Dependents: v => Math.round(v),
+  Credit_Score: v => Math.round(v),
+  Existing_Loans: v => Math.round(v),
+  DTI_Ratio: v => Number(v).toFixed(2),
+  Savings: v => "₹" + Math.round(v).toLocaleString(),
+  Collateral_Value: v => "₹" + Math.round(v).toLocaleString(),
+  Loan_Amount: v => "₹" + Math.round(v).toLocaleString(),
+  Loan_Term: v => Math.round(v) + " mo"
+};
+
+const state = {};
+
+function friendlyOneHot(name){
+  // e.g. "Employment_Status_Self-employed" -> ["Employment_Status","Self-employed"]
+  for (const col of MODEL.categorical_cols){
+    if (name.startsWith(col + "_")){
+      return [col, name.slice(col.length + 1)];
+    }
+  }
+  return [null, name];
+}
+
+function buildForm(){
+  const host = document.getElementById('formHost');
+  let html = '';
+
+  html += `<div class="field-group"><div class="field-group-title">Financial profile</div><div class="field-row">`;
+  const finCols = ["Applicant_Income","Coapplicant_Income","Savings","Loan_Amount","Collateral_Value","DTI_Ratio"];
+  finCols.forEach(c => { html += renderNumeric(c); state[c] = MODEL.numerical_stats[c].median; });
+  html += `</div></div>`;
+
+  html += `<div class="field-group"><div class="field-group-title">Credit &amp; obligations</div><div class="field-row">`;
+  const credCols = ["Credit_Score","Existing_Loans","Loan_Term","Dependents"];
+  credCols.forEach(c => { html += renderNumeric(c); state[c] = MODEL.numerical_stats[c].median; });
+  html += `</div></div>`;
+
+  html += `<div class="field-group"><div class="field-group-title">Applicant background</div><div class="field-row">`;
+  html += renderNumeric("Age"); state["Age"] = MODEL.numerical_stats["Age"].median;
+  MODEL.categorical_cols.forEach(c => {
+    html += renderSelect(c);
+    state[c] = MODEL.category_options[c][0];
+  });
+  html += `</div></div>`;
+
+  host.innerHTML = html;
+
+  // wire events
+  Object.keys(MODEL.numerical_stats).forEach(c => {
+    const el = document.getElementById('inp_' + c);
+    el.addEventListener('input', () => {
+      state[c] = parseFloat(el.value);
+      document.getElementById('val_' + c).textContent = FMT[c](state[c]);
+      predict();
+    });
+  });
+  MODEL.categorical_cols.forEach(c => {
+    const el = document.getElementById('sel_' + c);
+    el.addEventListener('change', () => { state[c] = el.value; predict(); });
+  });
+}
+
+function renderNumeric(c){
+  const s = MODEL.numerical_stats[c];
+  const step = STEP[c] || 1;
+  const val = s.median;
+  return `<div class="field">
+    <label for="inp_${c}">${LABELS[c] || c} <span class="val" id="val_${c}">${FMT[c](val)}</span></label>
+    <input type="range" id="inp_${c}" min="${s.min}" max="${s.max}" step="${step}" value="${val}">
+  </div>`;
+}
+
+function renderSelect(c){
+  const opts = MODEL.category_options[c].map(o => `<option value="${o}">${o}</option>`).join('');
+  return `<div class="field">
+    <label for="sel_${c}">${LABELS[c] || c}</label>
+    <select id="sel_${c}">${opts}</select>
+  </div>`;
+}
+
+function buildRawVector(){
+  // returns array aligned with MODEL.feature_names, plus per-feature contribution breakdown
+  return MODEL.feature_names.map(fname => {
+    if (MODEL.numerical_cols.includes(fname)){
+      return state[fname];
+    }
+    // one-hot
+    const [col, cat] = friendlyOneHot(fname);
+    return (state[col] === cat) ? 1 : 0;
+  });
+}
+
+function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+
+function predict(){
+  const raw = buildRawVector();
+  let z = MODEL.intercept;
+  const contributions = [];
+  raw.forEach((v, i) => {
+    const zscore = (v - MODEL.scaler_mean[i]) / MODEL.scaler_scale[i];
+    const contrib = zscore * MODEL.coef[i];
+    z += contrib;
+    contributions.push({ name: MODEL.feature_names[i], contrib });
+  });
+  const p = sigmoid(z);
+  renderVerdict(p);
+  renderFactors(contributions);
+}
+
+function renderVerdict(p){
+  const pct = Math.round(p * 100);
+  const stamp = document.getElementById('stamp');
+  const approved = p >= 0.5;
+  stamp.textContent = approved ? "Approved" : "Declined";
+  stamp.className = "stamp " + (approved ? "approved" : "declined") + " pulse";
+  setTimeout(() => stamp.classList.remove('pulse'), 400);
+  document.getElementById('probText').textContent = pct + "%";
+  document.getElementById('meterFill').style.width = pct + "%";
+}
+
+function niceFactorName(fname){
+  if (MODEL.numerical_cols.includes(fname)) return LABELS[fname] || fname;
+  const [col, cat] = friendlyOneHot(fname);
+  return (LABELS[col] || col) + ": " + cat;
+}
+
+function renderFactors(contributions){
+  const sorted = contributions.slice().sort((a,b) => Math.abs(b.contrib) - Math.abs(a.contrib)).slice(0,6);
+  const maxAbs = Math.max(...sorted.map(c => Math.abs(c.contrib)), 0.001);
+  const host = document.getElementById('factorHost');
+  host.innerHTML = sorted.map(c => {
+    const pct = Math.min(50, Math.abs(c.contrib) / maxAbs * 48);
+    const cls = c.contrib >= 0 ? "pos" : "neg";
+    return `<div class="factor-row">
+      <div class="factor-label">${niceFactorName(c.name)}</div>
+      <div class="factor-bar-track"><div class="factor-bar ${cls}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderGlobalImportance(){
+  const items = MODEL.feature_names.map((f,i) => ({ name: f, coef: MODEL.coef[i] }));
+  items.sort((a,b) => Math.abs(b.coef) - Math.abs(a.coef));
+  const top = items.slice(0, 14);
+  const maxAbs = Math.max(...top.map(i => Math.abs(i.coef)));
+  const host = document.getElementById('giHost');
+  host.innerHTML = top.map(i => {
+    const pct = Math.abs(i.coef) / maxAbs * 48;
+    const cls = i.coef >= 0 ? "pos" : "neg";
+    return `<div class="gi-row">
+      <div class="gi-label">${niceFactorName(i.name)}</div>
+      <div class="gi-track"><div class="gi-center"></div><div class="gi-bar ${cls}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderHeaderStats(){
+  document.getElementById('statRows').textContent = MODEL.n_rows.toLocaleString();
+  document.getElementById('statApproved').textContent = MODEL.approved_pct.toFixed(1) + "%";
+  document.getElementById('statAcc').textContent = (MODEL.metrics.accuracy*100).toFixed(1) + "%";
+  document.getElementById('mAcc').textContent = (MODEL.metrics.accuracy*100).toFixed(1) + "%";
+  document.getElementById('mPrec').textContent = (MODEL.metrics.precision*100).toFixed(1) + "%";
+  document.getElementById('mRec').textContent = (MODEL.metrics.recall*100).toFixed(1) + "%";
+  document.getElementById('mF1').textContent = (MODEL.metrics.f1*100).toFixed(1) + "%";
+  document.getElementById('fileNo').textContent = Math.floor(1000 + Math.random()*8999);
+}
+
+buildForm();
+renderHeaderStats();
+renderGlobalImportance();
+predict();
+</script>
+</body>
+</html>
